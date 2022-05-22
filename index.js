@@ -19,17 +19,28 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-      await client.connect();
-      const productsCollection = client.db("ABCHammer").collection("Products");
-        app.get('/products', async(req,res)=>{
-            const query = {};
-            const cursor = productsCollection.find(query);
-            const results = await cursor.toArray();
-            console.log(results);
-            res.send(results);
-        })
+    await client.connect();
+    const productsCollection = client.db("ABCHammer").collection("Products");
+    const reviewsCollection = client.db("ABCHammer").collection("Reviews");
 
+    // Products API For Getting Data From Server!
+    app.get("/products", async (req, res) => {
+      const query = {};
+      const cursor = productsCollection.find(query);
+      const results = await cursor.toArray();
+      console.log(results);
+      res.send(results);
+    });
 
+    // Reviews API For Getting Data From Server!
+    app.get("/reviews", async (req, res) => {
+      const query = {};
+      const cursor = reviewsCollection.find(query);
+      const results = await cursor.toArray();
+      console.log(results);
+      res.send(results);
+    });
+    
   } finally {
     //  await client.close();
   }
