@@ -8,9 +8,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
-const { request } = require("express");
 const uri = `mongodb+srv://${process.env.MONGODB_USER_NAME}:${process.env.MONGODB_USER_PASSWORD}@abchammer.8trn1.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
@@ -34,6 +33,14 @@ async function run() {
       res.send(results);
     });
 
+    // purchase API
+     app.get("/products/:id", async (req, res) => {
+       const id = req.params.id;
+       const query = { _id:ObjectId(id)};
+       const results = await productsCollection.findOne(query);
+       res.send(results);
+     });
+
     // Reviews API For Getting Data From Server!
     app.get("/users", async (req, res) => {
       const query = {};
@@ -44,16 +51,24 @@ async function run() {
     });
 
     // POST user data when user sign up
-    app.post('/users', async (req, res) => {
+    app.post("/users", async (req, res) => {
       const newUser = req.body;
       const query = { email: newUser.email, name: newUser.name };
       const exists = await usersCollection.findOne(query);
-      if(exists){
-        return res.send({success: false, newUser: exists})
+      if (exists) {
+        return res.send({ success: false, newUser: exists });
       }
       const results = await usersCollection.insertOne(newUser);
-      res.send(request);
-    })
+      res.send(results);
+    });
+
+    // Get user data
+    app.get("/users/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const results = await usersCollection.findOne(query);
+      res.send(results);
+    });
 
     // Reviews API For Getting Data From Server!
     app.get("/reviews", async (req, res) => {
@@ -63,7 +78,6 @@ async function run() {
       // console.log(results);
       res.send(results);
     });
-    
   } finally {
     //  await client.close();
   }
