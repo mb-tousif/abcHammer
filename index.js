@@ -8,6 +8,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "UnAuthorized access" });
+  }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.SECRETE_Token, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
+
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 const uri = `mongodb+srv://${process.env.MONGODB_USER_NAME}:${process.env.MONGODB_USER_PASSWORD}@abchammer.8trn1.mongodb.net/?retryWrites=true&w=majority`;
@@ -23,6 +38,7 @@ async function run() {
     const productsCollection = client.db("ABCHammer").collection("Products");
     const reviewsCollection = client.db("ABCHammer").collection("Reviews");
     const usersCollection = client.db("ABCHammer").collection("Users");
+    const ordersCollection = client.db("ABCHammer").collection("Orders");
 
     // Products API For Getting Data From Server!
     app.get("/products", async (req, res) => {
@@ -30,6 +46,26 @@ async function run() {
       const cursor = productsCollection.find(query);
       const results = await cursor.toArray();
       // console.log(results);
+      res.send(results);
+    });
+    // order get API
+    app.get("/orders", async (req, res) => {
+      const query = {};
+      const cursor = ordersCollection.find(query);
+      const results = await cursor.toArray();
+      // console.log(results);
+      res.send(results);
+    });
+
+    // orders post API
+    app.post("/orders", async (req, res) => {
+      const newOrder = req.body;
+      // const query = { email: newOrder.email, name: newOrder.name };
+      // const exists = await ordersCollection.findOne(query);
+      // if (exists) {
+      //   return res.send({ success: false, newOrder: exists });
+      // }
+      const results = await ordersCollection.insertOne(newOrder);
       res.send(results);
     });
 
@@ -62,6 +98,18 @@ async function run() {
       res.send(results);
     });
 
+     app.put('/user/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc, options);
+      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      res.send({ result, token });
+    })
     // Get user data
     app.get("/users/:id", async (req, res) => {
       const id = req.params.id;
