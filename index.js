@@ -78,6 +78,19 @@ async function run() {
       // console.log(results);
       res.send(results);
     });
+
+    // addReview API
+    app.post("/reviews", async (req, res) => {
+     const newReview = req.body;
+     const query = { email: newReview.email, name: newReview.name };
+     const exists = await reviewsCollection.findOne(query);
+     if (exists) {
+       return res.send({ success: false, newUser: exists });
+     }
+     const results = await usersCollection.insertOne(newUser);
+     res.send(results);
+
+    });
   } finally {
     //  await client.close();
   }
