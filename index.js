@@ -8,20 +8,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-function verifyJWT(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).send({ message: "UnAuthorized access" });
-  }
-  const token = authHeader.split(" ")[1];
-  jwt.verify(token, process.env.SECRETE_Token, function (err, decoded) {
-    if (err) {
-      return res.status(403).send({ message: "Forbidden access" });
-    }
-    req.decoded = decoded;
-    next();
-  });
-}
+// function verifyJWT(req, res, next) {
+//   const authHeader = req.headers.authorization;
+//   if (!authHeader) {
+//     return res.status(401).send({ message: "UnAuthorized access" });
+//   }
+//   const token = authHeader.split(" ")[1];
+//   jwt.verify(token, process.env.SECRETE_Token, function (err, decoded) {
+//     if (err) {
+//       return res.status(403).send({ message: "Forbidden access" });
+//     }
+//     req.decoded = decoded;
+//     next();
+//   });
+// }
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -49,33 +49,42 @@ async function run() {
       res.send(results);
     });
     // order get API
-    app.get("/orders", async (req, res) => {
-      const query = {};
-      const cursor = ordersCollection.find(query);
-      const results = await cursor.toArray();
-      // console.log(results);
-      res.send(results);
-    });
+    // app.get("/orders", async (req, res) => {
+    //   const query = {};
+    //   const cursor = ordersCollection.find(query);
+    //   const results = await cursor.toArray();
+    //   // console.log(results);
+    //   res.send(results);
+    // });
 
     // orders post API
     app.post("/orders", async (req, res) => {
       const newOrder = req.body;
-      // const query = { email: newOrder.email, name: newOrder.name };
-      // const exists = await ordersCollection.findOne(query);
-      // if (exists) {
-      //   return res.send({ success: false, newOrder: exists });
-      // }
+      const query = { buyer: newOrder.email };
+      const exists = await ordersCollection.findOne(query);
+      if (exists) {
+        return res.send({ success: false, newOrder: exists });
+      }
       const results = await ordersCollection.insertOne(newOrder);
+      res.send({ success: true, results });
+    });
+
+    // specific user order/my order API
+    app.get("/orders", async (req, res) => {
+      const buyer = req.query.buyer;
+      const query = { buyer: buyer };
+      const results = await ordersCollection.find(query).toArray();
+      // console.log(results);
       res.send(results);
     });
 
     // purchase API
-     app.get("/products/:id", async (req, res) => {
-       const id = req.params.id;
-       const query = { _id:ObjectId(id)};
-       const results = await productsCollection.findOne(query);
-       res.send(results);
-     });
+    app.get("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const results = await productsCollection.findOne(query);
+      res.send(results);
+    });
 
     // Reviews API For Getting Data From Server!
     app.get("/users", async (req, res) => {
@@ -98,18 +107,18 @@ async function run() {
       res.send(results);
     });
 
-     app.put('/user/:email', async (req, res) => {
-      const email = req.params.email;
-      const user = req.body;
-      const filter = { email: email };
-      const options = { upsert: true };
-      const updateDoc = {
-        $set: user,
-      };
-      const result = await userCollection.updateOne(filter, updateDoc, options);
-      const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
-      res.send({ result, token });
-    })
+    //  app.put('/user/:email', async (req, res) => {
+    //   const email = req.params.email;
+    //   const user = req.body;
+    //   const filter = { email: email };
+    //   const options = { upsert: true };
+    //   const updateDoc = {
+    //     $set: user,
+    //   };
+    //   const result = await userCollection.updateOne(filter, updateDoc, options);
+    //   const token = jwt.sign({ email: email }, process.env.SECRETE_Token, { expiresIn: '10d' })
+    //   res.send({ result, token });
+    // })
     // Get user data
     app.get("/users/:id", async (req, res) => {
       const id = req.params.id;
@@ -129,15 +138,14 @@ async function run() {
 
     // addReview API
     app.post("/reviews", async (req, res) => {
-     const newReview = req.body;
-     const query = { name: newReview.name };
-     const exists = await reviewsCollection.findOne(query);
-     if (exists) {
-       return res.send({ success: false, newReview: exists });
-     }
-     const results = await reviewsCollection.insertOne(newReview);
-     res.send(results);
-
+      const newReview = req.body;
+      const query = { name: newReview.name };
+      const exists = await reviewsCollection.findOne(query);
+      if (exists) {
+        return res.send({ success: false, newReview: exists });
+      }
+      const results = await reviewsCollection.insertOne(newReview);
+      res.send(results);
     });
   } finally {
     //  await client.close();
