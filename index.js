@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 4000;
 const app = express();
@@ -14,7 +15,7 @@ app.use(express.json());
 //     return res.status(401).send({ message: "UnAuthorized access" });
 //   }
 //   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.SECRETE_Token, function (err, decoded) {
+//   jwt.verify(token, process.env.SECRET_Token, function (err, decoded) {
 //     if (err) {
 //       return res.status(403).send({ message: "Forbidden access" });
 //     }
@@ -48,14 +49,6 @@ async function run() {
       // console.log(results);
       res.send(results);
     });
-    // order get API
-    // app.get("/orders", async (req, res) => {
-    //   const query = {};
-    //   const cursor = ordersCollection.find(query);
-    //   const results = await cursor.toArray();
-    //   // console.log(results);
-    //   res.send(results);
-    // });
 
     // orders post API
     app.post("/orders", async (req, res) => {
@@ -87,45 +80,51 @@ async function run() {
     });
 
     // Reviews API For Getting Data From Server!
-    app.get("/users", async (req, res) => {
-      const query = {};
-      const cursor = usersCollection.find(query);
-      const results = await cursor.toArray();
-      // console.log(results);
-      res.send(results);
-    });
+    // app.get("/users", async (req, res) => {
+    //   const query = {};
+    //   const cursor = usersCollection.find(query);
+    //   const results = await cursor.toArray();
+    //   // console.log(results);
+    //   res.send(results);
+    // });
 
     // POST user data when user sign up
-    app.post("/users", async (req, res) => {
-      const newUser = req.body;
-      const query = { email: newUser.email, name: newUser.name };
-      const exists = await usersCollection.findOne(query);
-      if (exists) {
-        return res.send({ success: false, newUser: exists });
-      }
-      const results = await usersCollection.insertOne(newUser);
-      res.send(results);
-    });
+    // app.post("/users", async (req, res) => {
+    //   const newUser = req.body;
+    //   const query = { email: newUser.email, name: newUser.name };
+    //   const exists = await usersCollection.findOne(query);
+    //   if (exists) {
+    //     return res.send({ success: false, newUser: exists });
+    //   }
+    //   const results = await usersCollection.insertOne(newUser);
+    //   // const token = jwt.sign({ email: email }, process.env.SECRETE_Token, { expiresIn: '10d' })
+    //   // res.send({ results, token });
+    //   res.send(results);
+    // });
 
-    //  app.put('/user/:email', async (req, res) => {
-    //   const email = req.params.email;
-    //   const user = req.body;
-    //   const filter = { email: email };
-    //   const options = { upsert: true };
-    //   const updateDoc = {
-    //     $set: user,
-    //   };
-    //   const result = await userCollection.updateOne(filter, updateDoc, options);
-    //   const token = jwt.sign({ email: email }, process.env.SECRETE_Token, { expiresIn: '10d' })
-    //   res.send({ result, token });
-    // })
+     app.put('/user/:email', async (req, res) => {
+      const email = req.params.email;
+      const user = req.body;
+      const filter = { email: email };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await usersCollection.updateOne(filter, updateDoc, options);
+      const token = jwt.sign({ email: email }, process.env.SECRET_Token, { expiresIn: '10d' })
+      // res.send(result);
+      console.log(token);
+      res.send({ result, token });
+      
+    })
+
     // Get user data
-    app.get("/users/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const results = await usersCollection.findOne(query);
-      res.send(results);
-    });
+    // app.get("/users/:id", async (req, res) => {
+    //   const id = req.params.id;
+    //   const query = { _id: ObjectId(id) };
+    //   const results = await usersCollection.findOne(query);
+    //   res.send(results);
+    // });
 
     // Reviews API For Getting Data From Server!
     app.get("/reviews", async (req, res) => {
