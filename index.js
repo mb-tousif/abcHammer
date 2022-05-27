@@ -9,20 +9,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// function verifyJWT(req, res, next) {
-//   const authHeader = req.headers.authorization;
-//   if (!authHeader) {
-//     return res.status(401).send({ message: "UnAuthorized access" });
-//   }
-//   const token = authHeader.split(" ")[1];
-//   jwt.verify(token, process.env.SECRET_Token, function (err, decoded) {
-//     if (err) {
-//       return res.status(403).send({ message: "Forbidden access" });
-//     }
-//     req.decoded = decoded;
-//     next();
-//   });
-// }
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized access" });
+  }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.SECRET_Token, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "Forbidden access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
@@ -50,6 +50,35 @@ async function run() {
       res.send(results);
     });
 
+    // Make User Admin API
+    // app.put("/user/admin/:email", async (req, res) => {
+    //   const email = req.params.email;
+    //     const filter = { email: email };
+    //     const updateDoc = {
+    //       $set: { role: "admin" },
+    //     };
+    //     const result = await usersCollection.updateOne(filter, updateDoc);
+    //     res.send(result);
+     
+    // });
+    app.put("/user/admin/:email", verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const requester = req.decoded.email;
+      const requesterAccount = await usersCollection.findOne({
+        email: requester,
+      });
+      if (requesterAccount.role === "admin") {
+        const filter = { email: email };
+        const updateDoc = {
+          $set: { role: "admin" },
+        };
+        const result = await usersCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      } else {
+        res.status(403).send({ message: "forbidden" });
+      }
+    });
+
     // orders post API
     app.post("/orders", async (req, res) => {
       const newOrder = req.body;
@@ -63,12 +92,25 @@ async function run() {
     });
 
     // specific user order/my order API
-    app.get("/orders", async (req, res) => {
+    app.get("/orders", verifyJWT, async (req, res) => {
       const buyer = req.query.buyer;
-      const query = { buyer: buyer };
-      const results = await ordersCollection.find(query).toArray();
-      // console.log(results);
-      res.send(results);
+      const decodedEmail = req.decoded.email;
+      if (buyer === decodedEmail){
+        const query = { buyer: buyer };
+        const results = await ordersCollection.find(query).toArray();
+        // console.log(results);
+        res.send(results);
+      }else{
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+    });
+
+    // Admin API
+    app.get("/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await usersCollection.findOne({ email: email });
+      const isAdmin = user.role === "admin";
+      res.send({ admin: isAdmin });
     });
 
     // purchase API
@@ -80,27 +122,13 @@ async function run() {
     });
 
     // Reviews API For Getting Data From Server!
-    // app.get("/users", async (req, res) => {
-    //   const query = {};
-    //   const cursor = usersCollection.find(query);
-    //   const results = await cursor.toArray();
-    //   // console.log(results);
-    //   res.send(results);
-    // });
-
-    // POST user data when user sign up
-    // app.post("/users", async (req, res) => {
-    //   const newUser = req.body;
-    //   const query = { email: newUser.email, name: newUser.name };
-    //   const exists = await usersCollection.findOne(query);
-    //   if (exists) {
-    //     return res.send({ success: false, newUser: exists });
-    //   }
-    //   const results = await usersCollection.insertOne(newUser);
-    //   // const token = jwt.sign({ email: email }, process.env.SECRETE_Token, { expiresIn: '10d' })
-    //   // res.send({ results, token });
-    //   res.send(results);
-    // });
+    app.get("/user",verifyJWT, async (req, res) => {
+      const query = {};
+      const cursor = usersCollection.find(query);
+      const results = await cursor.toArray();
+      // console.log(results);
+      res.send(results);
+    });
 
      app.put('/user/:email', async (req, res) => {
       const email = req.params.email;
@@ -112,19 +140,11 @@ async function run() {
       };
       const result = await usersCollection.updateOne(filter, updateDoc, options);
       const token = jwt.sign({ email: email }, process.env.SECRET_Token, { expiresIn: '10d' })
-      // res.send(result);
-      console.log(token);
+      // console.log(token);
       res.send({ result, token });
       
     })
 
-    // Get user data
-    // app.get("/users/:id", async (req, res) => {
-    //   const id = req.params.id;
-    //   const query = { _id: ObjectId(id) };
-    //   const results = await usersCollection.findOne(query);
-    //   res.send(results);
-    // });
 
     // Reviews API For Getting Data From Server!
     app.get("/reviews", async (req, res) => {
