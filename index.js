@@ -136,6 +136,16 @@ async function run() {
       }
     });
 
+    // Product Payment API
+    app.get("/order/:id", verifyJWT, async (req, res) => {
+      const id = req.query.id;
+        const query = { _id: ObjectId(id) };
+        const results = await ordersCollection.findOne(query);
+        // console.log(results);
+        res.send(results);
+
+    });
+
     // Admin API
     app.get("/admin/:email", async (req, res) => {
       const email = req.params.email;
